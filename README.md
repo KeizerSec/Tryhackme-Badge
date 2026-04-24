@@ -1,5 +1,12 @@
 # TryHackMe Badge
 
+<p align="center">
+  <a href="https://github.com/KeizerSec/Tryhackme-Badge/releases/latest"><img src="https://img.shields.io/github/v/release/KeizerSec/Tryhackme-Badge?style=for-the-badge&color=00FF9D&label=release" alt="Latest release"></a>
+  <a href="https://github.com/KeizerSec/Tryhackme-Badge/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/KeizerSec/Tryhackme-Badge/ci.yml?style=for-the-badge&label=CI" alt="CI status"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/KeizerSec/Tryhackme-Badge?style=for-the-badge&color=blue" alt="MIT license"></a>
+  <a href="https://github.com/KeizerSec/Tryhackme-Badge/stargazers"><img src="https://img.shields.io/github/stars/KeizerSec/Tryhackme-Badge?style=for-the-badge&color=yellow" alt="Stars"></a>
+</p>
+
 A GitHub Action that generates a beautiful, self-updating SVG badge with your live TryHackMe stats — rank, rooms, badges, level, league — straight from the official public profile API.
 
 <p align="center">
