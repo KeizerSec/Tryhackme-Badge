@@ -29,6 +29,16 @@ function levelToHex(n) {
   return '0x' + n.toString(16).toUpperCase();
 }
 
+function levelToTitle(n) {
+  const titles = [
+    'NEOPHYTE', 'APPRENTICE', 'PATHFINDER', 'SEEKER', 'VISIONARY',
+    'VOYAGER', 'ADEPT', 'HACKER', 'MAGE', 'WIZARD',
+    'MASTER', 'GURU', 'LEGEND', 'GUARDIAN', 'TITAN',
+    'SAGE', 'VANGUARD', 'SHOGUN', 'ASCENDED', 'MYTHIC', 'GRANDMASTER',
+  ];
+  return titles[Math.min(n - 1, titles.length - 1)] || 'NEOPHYTE';
+}
+
 function escapeXml(s) {
   return String(s)
     .replace(/&/g, '&amp;')
@@ -91,7 +101,7 @@ function buildSvg(data, theme, themeName) {
   </g>
 
   <text x="28" y="68" fill="${theme.text}" font-family="${FONT_MONO}" font-size="30" font-weight="700">${username}</text>
-  <text x="28" y="92" fill="${theme.muted}" font-family="${FONT_MONO}" font-size="11" font-weight="500" letter-spacing="1.2">[${levelHex}] LEGEND · ${league} LEAGUE</text>
+  <text x="28" y="92" fill="${theme.muted}" font-family="${FONT_MONO}" font-size="11" font-weight="500" letter-spacing="1.2">[${levelHex}] ${levelToTitle(data.level)} · ${league} LEAGUE</text>
 
   <g transform="translate(612,18)">
     <rect x="-94" y="0" width="94" height="18" rx="4" ry="4" fill="${theme.accent}" fill-opacity="0.10" stroke="${theme.accent}" stroke-opacity="0.45"/>
