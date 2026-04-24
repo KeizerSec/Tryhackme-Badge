@@ -1,5 +1,5 @@
 name: 'TryHackMe Badge'
-description: 'Generate and auto-update a beautiful live SVG badge with your TryHackMe stats. Five rotating themes, no Puppeteer, no scraping.'
+description: 'Live, self-updating SVG badge for your TryHackMe stats. Five rotating themes, no Puppeteer, pure GitHub Action.'
 author: 'KeizerSec'
 
 branding:
