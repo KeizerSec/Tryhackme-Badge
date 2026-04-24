@@ -51,7 +51,7 @@ function buildSvg(data, theme, themeName) {
   const rooms = data.completedRoomsNumber;
   const badges = data.badgesNumber;
   const points = formatPoints(data.totalPoints);
-  const league = (data.leagueTier || 'unranked').toUpperCase();
+  const league = escapeXml((data.leagueTier || 'unranked').toUpperCase());
   const updatedAt = new Date().toISOString().slice(0, 10);
 
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 180" width="640" height="180" role="img" aria-label="TryHackMe stats for ${username}">
