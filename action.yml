@@ -1,0 +1,85 @@
+name: 'TryHackMe Badge'
+description: 'Generate and auto-update a beautiful live SVG badge with your TryHackMe stats. Five rotating themes, no Puppeteer, no scraping.'
+author: 'KeizerSec'
+
+branding:
+  icon: 'shield'
+  color: 'green'
+
+inputs:
+  username:
+    description: 'Your TryHackMe username'
+    required: true
+  output_path:
+    description: 'Where the badge SVG will be written, relative to the repo root'
+    required: false
+    default: 'assets/thm_badge.svg'
+  theme:
+    description: 'Theme name. Either "rotate" (deterministic per UTC day), "random" (per-run), or one of: midnight, matrix, synthwave, inferno, frost.'
+    required: false
+    default: 'rotate'
+  accent_color:
+    description: 'Optional hex color (e.g. "#00FF9D") that overrides the theme accent and border.'
+    required: false
+    default: ''
+  auto_commit:
+    description: 'When true, commits and pushes the updated badge if it changed.'
+    required: false
+    default: 'true'
+  commit_message:
+    description: 'Commit message used when auto_commit is true.'
+    required: false
+    default: 'chore: refresh TryHackMe badge'
+  committer_name:
+    description: 'Git committer name used when auto_commit is true.'
+    required: false
+    default: 'github-actions[bot]'
+  committer_email:
+    description: 'Git committer email used when auto_commit is true.'
+    required: false
+    default: '41898282+github-actions[bot]@users.noreply.github.com'
+
+outputs:
+  theme_used:
+    description: 'Name of the theme actually rendered.'
+    value: ${{ steps.generate.outputs.theme_used }}
+  rank:
+    description: 'Current world rank reported by the TryHackMe public API.'
+    value: ${{ steps.generate.outputs.rank }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Node.js
+      uses: actions/setup-node@v6
+      with:
+        node-version: '22'
+
+    - name: Generate badge SVG
+      id: generate
+      shell: bash
+      env:
+        THM_USERNAME: ${{ inputs.username }}
+        OUTPUT_PATH: ${{ inputs.output_path }}
+        THEME: ${{ inputs.theme }}
+        ACCENT_COLOR: ${{ inputs.accent_color }}
+      run: node "${{ github.action_path }}/src/generate.js"
+
+    - name: Commit and push if changed
+      if: inputs.auto_commit == 'true'
+      shell: bash
+      env:
+        COMMIT_MSG: ${{ inputs.commit_message }}
+        COMMITTER_NAME: ${{ inputs.committer_name }}
+        COMMITTER_EMAIL: ${{ inputs.committer_email }}
+        OUTPUT_PATH: ${{ inputs.output_path }}
+      run: |
+        git config user.name  "$COMMITTER_NAME"
+        git config user.email "$COMMITTER_EMAIL"
+        git add "$OUTPUT_PATH"
+        if git diff --staged --quiet; then
+          echo "No badge changes to commit."
+          exit 0
+        fi
+        git commit -m "$COMMIT_MSG"
+        git push

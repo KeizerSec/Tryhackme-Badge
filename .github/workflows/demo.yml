@@ -1,0 +1,34 @@
+name: Demo Badge
+
+on:
+  schedule:
+    - cron: '17 5 * * *'
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'action.yml'
+      - '.github/workflows/demo.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: demo-badge
+  cancel-in-progress: false
+
+jobs:
+  demo:
+    name: Refresh the demo badge in the README
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Run the action against itself (dogfood)
+        uses: ./
+        with:
+          username: Keizer
+          output_path: assets/demo.svg
+          theme: rotate
+          commit_message: 'chore: refresh demo badge'
