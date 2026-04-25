@@ -39,6 +39,15 @@ function levelToTitle(n) {
   return titles[Math.min(n - 1, titles.length - 1)] || 'NEOPHYTE';
 }
 
+const CAPABILITY_PALETTES = {
+  red:   { from: '#ff8a6b', to: '#e94e3a' },
+  green: { from: '#c5cfff', to: '#5a7cff' },
+};
+
+function capabilityPalette(pov) {
+  return CAPABILITY_PALETTES[pov] || CAPABILITY_PALETTES.red;
+}
+
 function escapeXml(s) {
   return String(s)
     .replace(/&/g, '&amp;')
@@ -63,6 +72,9 @@ function buildSvg(data, theme, themeName) {
   const points = formatPoints(data.totalPoints);
   const league = escapeXml((data.leagueTier || 'unranked').toUpperCase());
   const updatedAt = new Date().toISOString().slice(0, 10);
+  const cap = data.capabilityScore;
+  const capValue = cap && Number.isFinite(cap.value) ? Math.round(cap.value) : null;
+  const capPalette = capabilityPalette(cap && cap.pov);
 
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 180" width="640" height="180" role="img" aria-label="TryHackMe stats for ${username}">
   <title>TryHackMe — ${username} — Top ${topPct}% — Rank #${rank} — theme: ${themeName}</title>
@@ -80,6 +92,10 @@ function buildSvg(data, theme, themeName) {
       <stop offset="0%" stop-color="${theme.accent}" stop-opacity="0"/>
       <stop offset="50%" stop-color="${theme.accent}" stop-opacity="0.6"/>
       <stop offset="100%" stop-color="${theme.accent}" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="capGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="${capPalette.from}"/>
+      <stop offset="100%" stop-color="${capPalette.to}"/>
     </linearGradient>
     <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
       <feGaussianBlur stdDeviation="1.4" result="b"/>
@@ -102,6 +118,14 @@ function buildSvg(data, theme, themeName) {
 
   <text x="28" y="68" fill="${theme.text}" font-family="${FONT_MONO}" font-size="30" font-weight="700">${username}</text>
   <text x="28" y="92" fill="${theme.muted}" font-family="${FONT_MONO}" font-size="11" font-weight="500" letter-spacing="1.2">[${levelHex}] ${levelToTitle(data.level)} · ${league} LEAGUE</text>
+${capValue !== null ? `  <g transform="translate(280,80)">
+    <rect x="6" y="0" width="6" height="6" rx="0.8" fill="url(#capGrad)" transform="rotate(45 9 3)"/>
+    <rect x="0" y="6" width="6" height="6" rx="0.8" fill="url(#capGrad)" transform="rotate(45 3 9)"/>
+    <rect x="12" y="6" width="6" height="6" rx="0.8" fill="url(#capGrad)" transform="rotate(45 15 9)"/>
+    <rect x="6" y="12" width="6" height="6" rx="0.8" fill="url(#capGrad)" transform="rotate(45 9 15)"/>
+    <text x="24" y="13" fill="${theme.text}" font-family="${FONT_MONO}" font-size="11" font-weight="700" letter-spacing="1.2">${capValue}</text>
+    <text x="42" y="13" fill="${theme.muted}" font-family="${FONT_MONO}" font-size="11" font-weight="500" letter-spacing="1.2">CAPABILITY</text>
+  </g>` : ''}
 
   <g transform="translate(612,18)">
     <rect x="-94" y="0" width="94" height="18" rx="4" ry="4" fill="${theme.accent}" fill-opacity="0.10" stroke="${theme.accent}" stroke-opacity="0.45"/>
