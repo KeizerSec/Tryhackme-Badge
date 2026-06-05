@@ -160,6 +160,31 @@ ${capValue !== null ? `  <g transform="translate(280,80)">
 `;
 }
 
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function fetchProfile(maxRetries = 4) {
+  for (let attempt = 1; ; attempt++) {
+    const res = await fetch(API_URL, {
+      headers: { 'Accept': 'application/json', 'User-Agent': 'KeizerSec/Tryhackme-Badge' },
+    });
+    if (res.ok) return res;
+
+    const retryable = res.status === 429 || res.status >= 500;
+    if (!retryable || attempt > maxRetries) {
+      throw new Error(`API returned ${res.status} ${res.statusText}`);
+    }
+
+    const retryAfter = Number(res.headers.get('retry-after'));
+    const waitMs = Number.isFinite(retryAfter) && retryAfter > 0
+      ? retryAfter * 1000
+      : Math.min(2 ** attempt * 1000, 30_000);
+    console.log(`[thm-badge] ${res.status} ${res.statusText} — retry ${attempt}/${maxRetries} in ${Math.round(waitMs / 1000)}s...`);
+    await sleep(waitMs);
+  }
+}
+
 async function main() {
   const themeName = pickTheme(THEME_INPUT);
   const theme = { ...THEMES[themeName] };
@@ -170,10 +195,7 @@ async function main() {
   console.log(`[thm-badge] Theme: ${themeName}${ACCENT_OVERRIDE ? ` (accent override: ${ACCENT_OVERRIDE})` : ''}`);
   console.log(`[thm-badge] Fetching profile for "${USERNAME}"...`);
 
-  const res = await fetch(API_URL, {
-    headers: { 'Accept': 'application/json', 'User-Agent': 'KeizerSec/Tryhackme-Badge' },
-  });
-  if (!res.ok) throw new Error(`API returned ${res.status} ${res.statusText}`);
+  const res = await fetchProfile();
   const json = await res.json();
   if (json.status !== 'success' || !json.data) {
     throw new Error(`Unexpected API payload: ${JSON.stringify(json).slice(0, 200)}`);
