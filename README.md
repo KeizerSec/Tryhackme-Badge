@@ -68,9 +68,26 @@ Then reference the image in your `README.md`:
 0 13 * * * cd ~/your-profile-repo && THM_USERNAME=YourThmUsername THEME=rotate OUTPUT_PATH=assets/thm_badge.svg node ~/.thm-badge/src/generate.js && git add -A && git commit -m "chore: refresh TryHackMe badge" && git push
 ```
 
-**macOS** — use a launchd agent instead (cron there can't read `~/Documents`, and the job must live outside it). A ready-to-edit template ships in [`scripts/com.keizersec.thm-badge.plist`](scripts/com.keizersec.thm-badge.plist) — adjust the paths, drop it in `~/Library/LaunchAgents/`, then `launchctl load -w` it.
+**macOS** — use a launchd agent instead of cron (cron can't read `~/Documents`). Put the refresh command in a small script **outside** `~/Documents` (e.g. `~/.thm-badge/refresh.sh`), then schedule it: a ready-to-edit plist template ships in [`scripts/com.keizersec.thm-badge.plist`](scripts/com.keizersec.thm-badge.plist) — point its `ProgramArguments` at your script, drop it in `~/Library/LaunchAgents/`, and `launchctl load -w` it.
 
-> The badge only updates when your machine is on. If it's asleep at the scheduled time, launchd runs the job at the next wake; plain cron simply runs it the next time the machine is up.
+**Windows** — save a `refresh-badge.cmd` in your profile repo:
+
+```bat
+@echo off
+cd /d C:\path\to\your-profile-repo
+set THM_USERNAME=YourThmUsername
+set THEME=rotate
+set OUTPUT_PATH=assets/thm_badge.svg
+node "%USERPROFILE%\.thm-badge\src\generate.js" && git add -A && git commit -m "chore: refresh TryHackMe badge" && git push
+```
+
+then register it as a daily task (Task Scheduler), e.g. at 13:00:
+
+```powershell
+schtasks /create /tn "TryHackMe Badge" /tr "C:\path\to\refresh-badge.cmd" /sc daily /st 13:00
+```
+
+> The badge only updates when your machine is on. If it's asleep at the scheduled time, launchd (macOS) runs the job at the next wake; cron (Linux) and Task Scheduler (Windows, with *"Run task as soon as possible after a missed start"* enabled) run it the next time the machine is up.
 
 ---
 
@@ -98,28 +115,23 @@ The default `theme: rotate` cycles through these five themes, advancing by one e
 
 ![frost](assets/preview-frost.svg)
 
-To **lock** the badge to a single theme:
+To **lock** the badge to a single theme, set `THEME`:
 
-```yaml
-- uses: KeizerSec/Tryhackme-Badge@v1
-  with:
-    username: YourThmUsername
-    theme: matrix
+```bash
+THM_USERNAME=YourThmUsername THEME=matrix OUTPUT_PATH=assets/thm_badge.svg node ~/.thm-badge/src/generate.js
 ```
 
-To **customize** the accent color while keeping a theme:
+To **customize** the accent color while keeping a theme, add `ACCENT_COLOR`:
 
-```yaml
-- uses: KeizerSec/Tryhackme-Badge@v1
-  with:
-    username: YourThmUsername
-    theme: midnight
-    accent_color: "#FF6B35"
+```bash
+THM_USERNAME=YourThmUsername THEME=midnight ACCENT_COLOR="#FF6B35" OUTPUT_PATH=assets/thm_badge.svg node ~/.thm-badge/src/generate.js
 ```
 
 ---
 
 ## Inputs
+
+When running directly (`node src/generate.js`), pass these as environment variables in UPPERCASE — `THM_USERNAME`, `OUTPUT_PATH`, `THEME`, `ACCENT_COLOR`. The `auto_commit` / `committer_*` / `commit_message` inputs apply only to the composite action (`uses: KeizerSec/Tryhackme-Badge@v1`) on a self-hosted residential runner.
 
 | Name | Required | Default | Description |
 |---|:---:|---|---|
@@ -144,10 +156,10 @@ To **customize** the accent color while keeping a theme:
 ## Troubleshooting
 
 **`Permission to <you>/<you>.git denied to github-actions[bot]` (HTTP 403)**
-Your workflow is missing `permissions: contents: write`. Add it at the workflow level (top of the YAML) or at the job level. See the Quick start above.
+Only relevant if you run the composite action on a self-hosted runner: the workflow is missing `permissions: contents: write`. Add it at the workflow or job level. (The local `node src/generate.js` flow pushes with your own Git credentials, so this doesn't apply.)
 
-**The badge doesn't appear in my README even after the workflow ran successfully**
-GitHub serves images through a cache (Camo). Force-refresh the README page (Cmd+Shift+R / Ctrl+F5). If you just ran the workflow for the first time, also wait ~30 seconds for the commit to propagate to `raw.githubusercontent.com`.
+**The badge doesn't appear in my README even after the job ran successfully**
+GitHub serves images through a cache (Camo). Force-refresh the README page (Cmd+Shift+R / Ctrl+F5). If you just ran it for the first time, also wait ~30 seconds for the commit to propagate to `raw.githubusercontent.com`.
 
 **The badge updated, but I don't see the new stats in my README**
 Same Camo cache. The image URL on `raw.githubusercontent.com` is fresh, but GitHub's proxy caches it. Either force-refresh, or append a cache-buster like `?v=2` to the image URL in your README.
@@ -156,7 +168,10 @@ Same Camo cache. The image URL on `raw.githubusercontent.com` is fresh, but GitH
 The `username` input is **case-sensitive** and must match exactly what appears in your TryHackMe profile URL (the part after `tryhackme.com/p/`). Common mistake: passing the email or the display name instead of the URL slug.
 
 **The daily cron doesn't seem to be running**
-GitHub disables scheduled workflows on repos that have had no activity for 60 days. Push any commit to wake it back up. Also keep in mind cron times are UTC.
+The job runs **on your own machine**, so it only fires while that machine is awake. Check it runs by hand first (`node ~/.thm-badge/src/generate.js …`), confirm the schedule is loaded (`crontab -l` on Linux, `launchctl list | grep thm-badge` on macOS, `schtasks /query /tn "TryHackMe Badge"` on Windows), and remember cron/launchd use **local** time.
+
+**`could not fetch profile via browser-TLS … (mitigated=challenge)`**
+You're running from a datacenter IP (a VPS, a CI runner, a VPN exit). Vercel challenges those regardless of TLS — run it from a residential connection.
 
 **Nothing shows up in `Used by` for my action**
 For the action's *own* dependents graph: GitHub indexing takes 24-48h after the first dependent is added.
