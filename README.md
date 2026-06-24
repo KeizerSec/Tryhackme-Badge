@@ -13,7 +13,9 @@ A GitHub Action that generates a beautiful, self-updating SVG badge with your li
   <img src="assets/demo.svg" alt="Live demo badge — theme rotates daily" width="640">
 </p>
 
-> Spiritual successor to the now-archived [`p4p1/tryhackme-badge-workflow`](https://github.com/p4p1/tryhackme-badge-workflow). Pure SVG. No Puppeteer. No Chrome on your runner. No HTML scraping.
+> Spiritual successor to the now-archived [`p4p1/tryhackme-badge-workflow`](https://github.com/p4p1/tryhackme-badge-workflow). Pure SVG. No Puppeteer. No Chrome. No HTML scraping.
+
+> **⚠️ Heads-up (June 2026).** TryHackMe moved its API behind Vercel's anti-bot challenge, which blocks every datacenter IP — so **GitHub-hosted runners can no longer fetch your stats**. The badge now refreshes from **any machine on a home/residential connection** via a small daily cron (see [Quick start](#quick-start)). Same badge, same themes — only *where it runs* changed.
 
 ---
 
@@ -24,60 +26,51 @@ A GitHub Action that generates a beautiful, self-updating SVG badge with your li
 - **Rotating themes** — defaults to `rotate`: deterministic per UTC day, so visitors see the same theme worldwide on a given day, but it changes overnight
 - **Pure SVG** — no external fonts, no remote images, renders instantly through GitHub's image proxy
 - **Customizable** — override the accent color, lock to one theme, change the output path, disable auto-commit
-- **Lightweight** — composite action, zero npm dependencies, runs in under 15 seconds on a stock runner
+- **Lightweight** — pure-Node SVG renderer plus one small Python helper (`curl_cffi`) for the fetch; no Chromium, no npm dependencies
 
 ---
 
 ## Quick start
 
-### TL;DR — minimal install
+Run it from any machine on a **residential connection** (your laptop, a home server, a Raspberry Pi…). Three steps.
 
-Add this to `.github/workflows/thm-badge.yml` in your **profile repository** (the one named like your username):
+### 1 — Install once
 
-```yaml
-on: { schedule: [{ cron: '17 5 * * *' }], workflow_dispatch: }
-permissions: { contents: write }
-jobs:
-  update:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-      - uses: KeizerSec/Tryhackme-Badge@v1
-        with: { username: YourThmUsername }
+```bash
+# Node.js 20+, Git and Python 3 must already be installed.
+pip install --user curl_cffi                                              # browser-grade fetch, gets past Vercel
+git clone https://github.com/KeizerSec/Tryhackme-Badge.git ~/.thm-badge   # the renderer
 ```
 
-Then add this to your `README.md`:
+### 2 — The refresh command
+
+Run this **inside your profile repository** (the one named like your username):
+
+```bash
+THM_USERNAME=YourThmUsername THEME=rotate OUTPUT_PATH=assets/thm_badge.svg \
+  node ~/.thm-badge/src/generate.js \
+  && git add assets/thm_badge.svg \
+  && git commit -m "chore: refresh TryHackMe badge" \
+  && git push
+```
+
+Then reference the image in your `README.md`:
 
 ```markdown
 ![TryHackMe](https://raw.githubusercontent.com/<your-gh-name>/<your-gh-name>/main/assets/thm_badge.svg)
 ```
 
-Go to **Actions → Update TryHackMe Badge → Run workflow** to trigger it once. After that, it refreshes daily.
+### 3 — Automate it daily
 
-> **Make sure** your workflow has `permissions: contents: write` — without it, the action cannot commit the refreshed SVG and the daily run will fail with a 403.
+**Linux** — `crontab -e`, then add (13:00 every day):
 
-### Recommended — the readable version
-
-```yaml
-name: Update TryHackMe Badge
-
-on:
-  schedule:
-    - cron: '17 5 * * *'
-  workflow_dispatch:
-
-permissions:
-  contents: write
-
-jobs:
-  update:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-      - uses: KeizerSec/Tryhackme-Badge@v1
-        with:
-          username: YourThmUsername
+```cron
+0 13 * * * cd ~/your-profile-repo && THM_USERNAME=YourThmUsername THEME=rotate OUTPUT_PATH=assets/thm_badge.svg node ~/.thm-badge/src/generate.js && git add -A && git commit -m "chore: refresh TryHackMe badge" && git push
 ```
+
+**macOS** — use a launchd agent instead (cron there can't read `~/Documents`, and the job must live outside it). A ready-to-edit template ships in [`scripts/com.keizersec.thm-badge.plist`](scripts/com.keizersec.thm-badge.plist) — adjust the paths, drop it in `~/Library/LaunchAgents/`, then `launchctl load -w` it.
+
+> The badge only updates when your machine is on. If it's asleep at the scheduled time, launchd runs the job at the next wake; plain cron simply runs it the next time the machine is up.
 
 ---
 
@@ -178,9 +171,9 @@ The action calls the TryHackMe public profile API:
 GET https://tryhackme.com/api/v2/public-profile?username=<you>
 ```
 
-It returns clean JSON with rank, rooms, badges, points, level, and league tier. The action renders a self-contained SVG using inline gradients and SVG primitives only — no `@font-face`, no remote images, no JavaScript inside the SVG — so GitHub's image proxy serves it without sandboxing issues.
+The endpoint sits behind Vercel's anti-bot challenge, which serves a JS checkpoint to any non-browser TLS fingerprint. The fetch therefore goes through a tiny `curl_cffi` helper that reproduces a real Chrome handshake, so the API returns clean JSON with rank, rooms, badges, points, level, and league tier. The renderer then builds a self-contained SVG using inline gradients and SVG primitives only — no `@font-face`, no remote images, no JavaScript inside the SVG — so GitHub's image proxy serves it without sandboxing issues.
 
-The output SVG is written into **your** repository (at `output_path`) and committed by the bot. Your README references it via `raw.githubusercontent.com`, so each visitor sees the latest committed version.
+The output SVG is written into **your** repository (at `output_path`) and committed by your daily job. Your README references it via `raw.githubusercontent.com`, so each visitor sees the latest committed version.
 
 ## Why not p4p1's action?
 
@@ -201,12 +194,12 @@ THM_USERNAME=YourThmUsername THEME=synthwave OUTPUT_PATH=/tmp/badge.svg node src
 open /tmp/badge.svg
 ```
 
-Set `THEME` to any of the five names, or to `rotate` / `random`. Requires Node.js 20+.
+Set `THEME` to any of the five names, or to `rotate` / `random`. Requires Node.js 20+ and Python 3 with `curl_cffi` (`pip install --user curl_cffi`), and a residential connection.
 
 ## Compatibility
 
-- Runs on `ubuntu-latest`, `macos-latest`, and `windows-latest` GitHub-hosted runners
-- Node.js 22 (set automatically by the action via `actions/setup-node@v6`)
+- Runs on **any machine with a residential IP** — laptop, home server, Raspberry Pi (Linux, macOS, Windows). **Not** on GitHub-hosted runners: Vercel's anti-bot challenge blocks their datacenter IPs.
+- Node.js 20+ and Python 3 with `curl_cffi`
 - Zero npm dependencies — no `npm install` step needed
 
 ## License
