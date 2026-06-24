@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  launchd agent that refreshes the TryHackMe badges daily from this (residential)
+  Mac. Install: copy to ~/Library/LaunchAgents/, then `launchctl load -w` it.
+
+  It runs the script from a clone under ~/.cache (NOT ~/Documents): launchd is
+  denied access to ~/Documents / ~/Desktop / ~/Downloads by macOS TCC, so the
+  engine lives in ~/.cache/thm-badge/Tryhackme-Badge instead.
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.keizersec.thm-badge</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>/Users/keizer/.cache/thm-badge/Tryhackme-Badge/scripts/refresh-badges.sh</string>
+    </array>
+
+    <!-- Daily at 13:00 local. If the Mac is asleep/off then, launchd runs it at
+         the next wake. -->
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Hour</key>
+        <integer>13</integer>
+        <key>Minute</key>
+        <integer>0</integer>
+    </dict>
+
+    <key>RunAtLoad</key>
+    <false/>
+
+    <key>StandardOutPath</key>
+    <string>/Users/keizer/Library/Logs/thm-badge.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/keizer/Library/Logs/thm-badge.log</string>
+</dict>
+</plist>

@@ -1,15 +1,12 @@
 name: Demo Badge
 
+# NOTE: TryHackMe's API is behind Vercel bot mitigation that challenges every
+# datacenter IP, so GitHub-hosted runners can no longer fetch the profile. The
+# demo badge (assets/demo.svg) is refreshed from a residential machine instead
+# (see scripts/refresh-badges.sh + the launchd agent). This workflow is kept for
+# manual runs only and will fail on a cloud runner.
 on:
-  schedule:
-    - cron: '17 5 * * *'
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - 'src/**'
-      - 'action.yml'
-      - '.github/workflows/demo.yml'
 
 permissions:
   contents: write
