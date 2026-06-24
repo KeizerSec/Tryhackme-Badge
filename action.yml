@@ -55,6 +55,15 @@ runs:
       with:
         node-version: '22'
 
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+
+    - name: Install browser-TLS fetch dependency
+      shell: bash
+      run: python3 -m pip install --quiet --disable-pip-version-check curl_cffi
+
     - name: Generate badge SVG
       id: generate
       shell: bash

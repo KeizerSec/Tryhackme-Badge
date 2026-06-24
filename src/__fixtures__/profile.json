@@ -1,0 +1,17 @@
+{
+  "status": "success",
+  "data": {
+    "username": "Keizer",
+    "level": 13,
+    "totalPoints": 21182,
+    "badgesNumber": 29,
+    "completedRoomsNumber": 184,
+    "rank": 29039,
+    "topPercentage": 2,
+    "leagueTier": "bronze",
+    "capabilityScore": {
+      "value": 63.75930354714643,
+      "pov": "red"
+    }
+  }
+}

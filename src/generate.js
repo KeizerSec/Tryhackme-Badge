@@ -3,6 +3,7 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
+const { execFileSync } = require('node:child_process');
 const { THEMES, pickTheme } = require('./themes');
 
 const USERNAME = process.env.THM_USERNAME;
@@ -15,8 +16,7 @@ if (!USERNAME) {
   process.exit(1);
 }
 
-const API_URL = `https://tryhackme.com/api/v2/public-profile?username=${encodeURIComponent(USERNAME)}`;
-const FONT_MONO = "ui-monospace,'SF Mono','Menlo','Cascadia Code','Consolas','Liberation Mono',monospace";
+const FONT_MONO ="ui-monospace,'SF Mono','Menlo','Cascadia Code','Consolas','Liberation Mono',monospace";
 
 function formatPoints(n) {
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(1).replace(/\.0$/, '') + 'M';
@@ -160,29 +160,35 @@ ${capValue !== null ? `  <g transform="translate(280,80)">
 `;
 }
 
-function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-async function fetchProfile(maxRetries = 4) {
-  for (let attempt = 1; ; attempt++) {
-    const res = await fetch(API_URL, {
-      headers: { 'Accept': 'application/json', 'User-Agent': 'KeizerSec/Tryhackme-Badge' },
-    });
-    if (res.ok) return res;
-
-    const retryable = res.status === 429 || res.status >= 500;
-    if (!retryable || attempt > maxRetries) {
-      throw new Error(`API returned ${res.status} ${res.statusText}`);
-    }
-
-    const retryAfter = Number(res.headers.get('retry-after'));
-    const waitMs = Number.isFinite(retryAfter) && retryAfter > 0
-      ? retryAfter * 1000
-      : Math.min(2 ** attempt * 1000, 30_000);
-    console.log(`[thm-badge] ${res.status} ${res.statusText} — retry ${attempt}/${maxRetries} in ${Math.round(waitMs / 1000)}s...`);
-    await sleep(waitMs);
+// TryHackMe's API is behind Vercel's bot mitigation: any request whose TLS/HTTP-2
+// fingerprint is not a real browser gets a JS challenge (429, x-vercel-mitigated)
+// instead of JSON — so a plain Node fetch is blocked. We delegate the fetch to a
+// small Python helper using curl_cffi, which reproduces Chrome's exact handshake
+// and is served the JSON directly. No headless browser, no challenge to solve.
+function fetchProfileJson() {
+  const fixture = process.env.THM_FIXTURE;
+  if (fixture) {
+    console.log(`[thm-badge] Using fixture ${fixture} (offline mode)`);
+    return JSON.parse(fs.readFileSync(fixture, 'utf8'));
   }
+
+  const helper = path.join(__dirname, 'fetch_profile.py');
+  const python = process.env.PYTHON_BIN || 'python3';
+  let stdout;
+  try {
+    stdout = execFileSync(python, [helper, USERNAME], {
+      encoding: 'utf8',
+      timeout: 90_000,
+      maxBuffer: 16 * 1024 * 1024,
+      stdio: ['ignore', 'pipe', 'inherit'],
+    });
+  } catch (err) {
+    if (err.code === 'ENOENT') {
+      throw new Error(`'${python}' not found — Python 3 with curl_cffi is required to fetch the profile.`);
+    }
+    throw new Error(`profile fetch failed (browser-TLS helper exited ${err.status ?? err.signal ?? 'error'})`);
+  }
+  return JSON.parse(stdout);
 }
 
 async function main() {
@@ -195,8 +201,7 @@ async function main() {
   console.log(`[thm-badge] Theme: ${themeName}${ACCENT_OVERRIDE ? ` (accent override: ${ACCENT_OVERRIDE})` : ''}`);
   console.log(`[thm-badge] Fetching profile for "${USERNAME}"...`);
 
-  const res = await fetchProfile();
-  const json = await res.json();
+  const json = fetchProfileJson();
   if (json.status !== 'success' || !json.data) {
     throw new Error(`Unexpected API payload: ${JSON.stringify(json).slice(0, 200)}`);
   }
