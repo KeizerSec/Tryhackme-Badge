@@ -19,18 +19,28 @@
         <string>/Users/keizer/.cache/thm-badge/Tryhackme-Badge/scripts/refresh-badges.sh</string>
     </array>
 
-    <!-- Daily at 13:00 local. If the Mac is asleep/off then, launchd runs it at
-         the next wake. -->
+    <!-- Twice daily (13:00 and 19:00 local) as a safety net: if the first run
+         fires just after wake before the network is up, the second one catches it.
+         If the Mac is asleep/off at both times, launchd runs it at the next wake. -->
     <key>StartCalendarInterval</key>
-    <dict>
-        <key>Hour</key>
-        <integer>13</integer>
-        <key>Minute</key>
-        <integer>0</integer>
-    </dict>
+    <array>
+        <dict>
+            <key>Hour</key>
+            <integer>13</integer>
+            <key>Minute</key>
+            <integer>0</integer>
+        </dict>
+        <dict>
+            <key>Hour</key>
+            <integer>19</integer>
+            <key>Minute</key>
+            <integer>0</integer>
+        </dict>
+    </array>
 
+    <!-- Also run shortly after load/login, so a missed day self-heals on next boot. -->
     <key>RunAtLoad</key>
-    <false/>
+    <true/>
 
     <key>StandardOutPath</key>
     <string>/Users/keizer/Library/Logs/thm-badge.log</string>
