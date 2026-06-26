@@ -1,5 +1,5 @@
 name: 'TryHackMe Badge'
-description: 'Live, self-updating SVG badge for your TryHackMe stats. Five rotating themes, no Puppeteer, pure GitHub Action.'
+description: 'Self-updating SVG badge for your TryHackMe stats. Five rotating themes, no headless browser. Runs from a residential machine (local cron / self-hosted runner) — TryHackMe now blocks datacenter/cloud IPs.'
 author: 'KeizerSec'
 
 branding:
